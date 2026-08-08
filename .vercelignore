@@ -1,0 +1,6 @@
+node_modules
+.next
+
+# The Prisma client is generated per-platform. Never upload the local (Windows)
+# build — Vercel regenerates a Linux client via the `postinstall` script.
+generated

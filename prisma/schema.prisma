@@ -1,0 +1,194 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// npx prisma db push
+// npx prisma generate
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                     String    @id @default(auto()) @map("_id") @db.ObjectId
+
+  email                  String    @unique
+  fullName               String
+  password               String
+
+  verified               Boolean   @default(false)
+
+  verificationOtp        String?
+  verificationOtpSendAt  DateTime?
+
+  resetPasswordOtp       String?
+  resetPasswordOtpSendAt DateTime?
+
+  passwordUpdatedAt      DateTime  @default(now())
+
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+}
+
+
+model Admin {
+  id                     String    @id @default(auto()) @map("_id") @db.ObjectId
+  email                  String    @unique
+  firstName              String
+  lastName               String
+  password               String
+  passwordUpdatedAt      DateTime  @default(now())
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+}
+
+
+model Category {
+  id        String     @id @default(auto()) @map("_id") @db.ObjectId
+  name      String     // "Agriculture"
+  slug      String     @unique // "agriculture" — replaces redundant old categoryId
+  businesses Business[]
+
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@map("categories")
+}
+
+model Business {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  slug        String   @unique // "my-business" — replaces redundant old businessId
+  name        String
+  logo        String?
+  about       String
+  subcategory String?
+  location    String?
+  rating      Float      @default(0)
+  reviewCount Int        @default(0) // denormalized, synced on review create/delete
+  productTag  String[]
+  platforms   Platform[]
+  reviews     Review[]
+
+  categoryId  String   @db.ObjectId
+  category    Category @relation(fields: [categoryId], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([rating])
+  @@index([name])
+  @@index([categoryId])
+  @@map("businesses")
+}
+
+// Embedded composite type — always read scoped to its parent Business
+type Platform {
+  name PlatformName
+  url  String
+}
+
+enum PlatformName {
+  facebook
+  youtube
+  instagram
+  twitter
+  tiktok
+  linkedin
+  website
+}
+
+model ContactInquiry {
+  id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  fullName         String
+  email            String
+  mobileOrWhatsapp String
+  message          String
+  bookingRequested Boolean   @default(false)
+  appointmentDate  DateTime?
+  appointmentTime  String?
+  createdAt        DateTime  @default(now())
+
+  @@index([createdAt])
+  @@map("contact_inquiries")
+}
+
+enum ReviewStatus {
+  pending
+  approved
+  rejected
+}
+
+// Separate collection — queried independently (e.g. "Latest Reviews" homepage section)
+model Review {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  reviewerName   String
+  authorLocation String? // only set for admin-entered reviews
+  email          String
+  title          String?
+  rating         Float
+  image          String?
+  message        String
+
+  status         ReviewStatus @default(pending)
+  deleted        Boolean      @default(false)
+  ipAddress      String?
+  userAgent      String?
+
+  businessId     String   @db.ObjectId
+  business       Business @relation(fields: [businessId], references: [id])
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([businessId, status, deleted])
+  @@index([createdAt])
+  @@map("reviews")
+}
+
+enum BlogStatus {
+  draft
+  published
+}
+
+model Blog {
+  id           String     @id @default(auto()) @map("_id") @db.ObjectId
+  slug         String     @unique
+  title        String
+  excerpt      String
+  content      String
+  coverImage   String?
+  category     String
+  tags         String[]
+  authorName   String
+  authorAvatar String?
+  readingTime  Int        @default(5)
+  viewCount    Int        @default(0)
+  featured     Boolean    @default(false)
+  status       BlogStatus @default(draft)
+  publishedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, publishedAt])
+  @@index([category])
+  @@index([featured])
+  @@map("blogs")
+}
+
+model NewsletterSubscriber {
+  id    String @id @default(auto()) @map("_id") @db.ObjectId
+  email String @unique
+
+  createdAt DateTime @default(now())
+
+  @@map("newsletter_subscribers")
+}
