@@ -33,22 +33,16 @@ export const reviewFormSchema = z.object({
 
 export type ReviewFormValues = z.infer<typeof reviewFormSchema>;
 
-// Public "Write a Review" flow (Business Details page)
+// Public "Write a Review" flow (Business Details page).
+// The reviewer's name and email are NOT accepted from the client — the action
+// reads them off the session, so a review can't be posted under someone else's
+// identity.
 export const publicReviewSchema = z.object({
   businessId: z.string().min(1, { message: "Missing business" }),
   rating: z
     .number()
     .min(1, { message: "Please select a rating" })
     .max(5, { message: "Cannot exceed 5" }),
-  fullName: z
-    .string()
-    .trim()
-    .min(2, { message: "Please enter your name" })
-    .max(100, { message: "Name is too long" }),
-  email: z
-    .string()
-    .trim()
-    .email({ message: "Please enter a valid email address" }),
   title: z.string().trim().max(150).optional().or(z.literal("")),
   message: z
     .string()

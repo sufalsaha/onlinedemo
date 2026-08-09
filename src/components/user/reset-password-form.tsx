@@ -2,7 +2,6 @@
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
-import * as z from "zod"
 import Link from "next/link"
 import { useState } from "react"
 import { useSearchParams } from "next/navigation"
@@ -18,24 +17,17 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-
-// Validation Schema
-const resetPasswordSchema = z
-  .object({
-    password: z.string().min(6, { message: "Password must be at least 6 characters" }),
-    confirmPassword: z.string().min(6, { message: "Password must be at least 6 characters" }),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
-  })
-
-type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
+import { resetPassword } from "@/actions/user-actions"
+import {
+  OTP_LENGTH,
+  resetPasswordSchema,
+  type ResetPasswordFormValues,
+} from "@/lib/schemas/auth"
 
 export function ResetPasswordForm() {
   const searchParams = useSearchParams()
-  const email = searchParams.get("email")
-  const [isReset, setIsReset] = useState(false)
+  const email = searchParams.get("email") ?? ""
+  const [error, setError] = useState<string | undefined>()
 
   const {
     register,
@@ -43,12 +35,22 @@ export function ResetPasswordForm() {
     formState: { errors, isSubmitting },
   } = useForm<ResetPasswordFormValues>({
     resolver: zodResolver(resetPasswordSchema),
-    defaultValues: { password: "", confirmPassword: "" },
+    defaultValues: { email, code: "", password: "", confirmPassword: "" },
   })
 
-  function onSubmit(values: ResetPasswordFormValues) {
-    console.log(values)
-    setIsReset(true)
+  async function onSubmit(values: ResetPasswordFormValues) {
+    setError(undefined)
+
+    try {
+      const result = await resetPassword(values)
+      if (result?.error) {
+        setError(result.error)
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Something went wrong. Please try again."
+      )
+    }
   }
 
   return (
@@ -59,62 +61,101 @@ export function ResetPasswordForm() {
             Reset Password
           </CardTitle>
           <CardDescription className="text-center">
+            Enter the code we emailed you and choose a new password
             {email ? (
-              <>Choose a new password for <span className="font-medium">{email}</span></>
-            ) : (
-              "Choose a new password for your account"
-            )}
+              <> for <span className="font-medium">{email}</span></>
+            ) : null}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isReset ? (
-            <p className="text-sm text-center text-muted-foreground">
-              Your password has been reset. You can now sign in with your new password.
-            </p>
-          ) : (
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
 
-              {/* New Password Field */}
+            {/* Carried over from the forgot-password step. When it's missing
+                (direct link, retyped URL) the user types it in below instead —
+                registering both would put two refs on one field. */}
+            {email ? (
+              <input type="hidden" {...register("email")} />
+            ) : (
               <Field>
-                <FieldLabel htmlFor="password">New Password</FieldLabel>
+                <FieldLabel htmlFor="email">Email</FieldLabel>
                 <FieldContent>
-                  <PasswordInput
-                    id="password"
-                    placeholder="••••••••"
-                    aria-invalid={!!errors.password}
-                    {...register("password")}
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="name@example.com"
+                    aria-invalid={!!errors.email}
+                    {...register("email")}
                   />
                 </FieldContent>
-                {errors.password && <FieldError>{errors.password.message}</FieldError>}
+                {errors.email && <FieldError>{errors.email.message}</FieldError>}
               </Field>
+            )}
 
-              {/* Confirm Password Field */}
-              <Field>
-                <FieldLabel htmlFor="confirmPassword">Confirm Password</FieldLabel>
-                <FieldContent>
-                  <PasswordInput
-                    id="confirmPassword"
-                    placeholder="••••••••"
-                    aria-invalid={!!errors.confirmPassword}
-                    {...register("confirmPassword")}
-                  />
-                </FieldContent>
-                {errors.confirmPassword && <FieldError>{errors.confirmPassword.message}</FieldError>}
-              </Field>
+            {/* Reset Code Field */}
+            <Field>
+              <FieldLabel htmlFor="code">Reset Code</FieldLabel>
+              <FieldContent>
+                <Input
+                  id="code"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={OTP_LENGTH}
+                  placeholder={"0".repeat(OTP_LENGTH)}
+                  aria-invalid={!!errors.code}
+                  className="tracking-[0.4em] text-center font-semibold"
+                  {...register("code")}
+                />
+              </FieldContent>
+              {errors.code && <FieldError>{errors.code.message}</FieldError>}
+            </Field>
 
-              {/* Submit Button */}
-              <Button type="submit" className="w-full mt-2" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <RotateCw className="w-4 h-4 mr-2 animate-spin" />
-                    Resetting...
-                  </>
-                ) : (
-                  "Reset Password"
-                )}
-              </Button>
-            </form>
-          )}
+            {/* New Password Field */}
+            <Field>
+              <FieldLabel htmlFor="password">New Password</FieldLabel>
+              <FieldContent>
+                <PasswordInput
+                  id="password"
+                  placeholder="••••••••"
+                  aria-invalid={!!errors.password}
+                  {...register("password")}
+                />
+              </FieldContent>
+              {errors.password && <FieldError>{errors.password.message}</FieldError>}
+            </Field>
+
+            {/* Confirm Password Field */}
+            <Field>
+              <FieldLabel htmlFor="confirmPassword">Confirm Password</FieldLabel>
+              <FieldContent>
+                <PasswordInput
+                  id="confirmPassword"
+                  placeholder="••••••••"
+                  aria-invalid={!!errors.confirmPassword}
+                  {...register("confirmPassword")}
+                />
+              </FieldContent>
+              {errors.confirmPassword && <FieldError>{errors.confirmPassword.message}</FieldError>}
+            </Field>
+
+            {/* Server Error Message */}
+            {error && (
+              <div className="text-sm font-medium p-3 bg-destructive/10 text-destructive rounded-md">
+                {error}
+              </div>
+            )}
+
+            {/* Submit Button */}
+            <Button type="submit" className="w-full mt-2" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <RotateCw className="w-4 h-4 mr-2 animate-spin" />
+                  Resetting...
+                </>
+              ) : (
+                "Reset Password"
+              )}
+            </Button>
+          </form>
 
           <div className="mt-4 text-center text-sm text-muted-foreground">
             Remember your password?{" "}

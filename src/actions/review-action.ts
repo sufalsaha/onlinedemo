@@ -5,7 +5,8 @@ import { headers } from "next/headers";
 import type { Prisma } from "../../generated/prisma/client";
 
 import { prisma } from "@/lib/prisma";
-import { getCurrentAdmin } from "@/lib/auth/user-auth";
+import { getCurrentAdmin, getCurrentUser } from "@/lib/auth/user-auth";
+import { EN } from "@/lib/lang";
 import {
   reviewFormSchema,
   publicReviewSchema,
@@ -261,6 +262,10 @@ export async function softDeleteReview(
 export async function createPublicReview(
   values: PublicReviewFormValues
 ): Promise<ActionResult<{ id: string }>> {
+  const user = await getCurrentUser();
+  if (!user) return { error: EN.notLoggedIn };
+  if (!user.verified) return { error: EN.verifyEmailFirst };
+
   const parsed = publicReviewSchema.safeParse(values);
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid data" };
@@ -286,8 +291,9 @@ export async function createPublicReview(
       data: {
         businessId: parsed.data.businessId,
         rating: parsed.data.rating,
-        reviewerName: parsed.data.fullName,
-        email: parsed.data.email,
+        // Identity comes from the session, never from the payload.
+        reviewerName: user.fullName,
+        email: user.email,
         title: parsed.data.title || undefined,
         message: parsed.data.message,
         status: "pending",

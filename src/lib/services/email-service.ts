@@ -1,6 +1,5 @@
 import nodemailer from "nodemailer";
 import {
-  environment,
   smtpHost,
   smtpPort,
   smtpSenderName,
@@ -34,13 +33,5 @@ export async function sendMail({
     html: html,
   };
 
-  if (environment === "development") {
-    await transporter.sendMail(options);
-  }
-
-  // if (environment === "production") {
-  //   await transporter.sendMail(options);
-  // } else {
-  //   console.log(`An email will be sent into ${to} on production environment.`);
-  // }
+  await transporter.sendMail(options);
 }

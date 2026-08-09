@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CheckCircle2, RotateCw, Star } from "lucide-react";
+import Link from "next/link";
+import { CheckCircle2, MailWarning, RotateCw, Star, UserRound } from "lucide-react";
 
 import {
   Dialog,
@@ -14,10 +15,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field";
+import { cn } from "@/lib/utils";
 
 import { createPublicReview } from "@/actions/review-action";
 import {
@@ -28,11 +30,14 @@ import {
 interface WriteReviewDialogProps {
   businessId: string;
   businessName: string;
+  /** null when signed out. Reviews are attributed from the session, not this prop. */
+  reviewer: { fullName: string; verified: boolean } | null;
 }
 
 export function WriteReviewDialog({
   businessId,
   businessName,
+  reviewer,
 }: WriteReviewDialogProps) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
@@ -51,8 +56,6 @@ export function WriteReviewDialog({
     defaultValues: {
       businessId,
       rating: 0,
-      fullName: "",
-      email: "",
       title: "",
       message: "",
     },
@@ -94,7 +97,34 @@ export function WriteReviewDialog({
         </button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md bg-popover text-popover-foreground">
-        {submitted ? (
+        {!reviewer ? (
+          <GateMessage
+            icon={<UserRound className="w-12 h-12 text-[#00C085]" />}
+            title="Sign in to write a review"
+            description={`Reviews on ${businessName} are tied to a verified account, so readers know they're genuine.`}
+            actionHref="/user/login"
+            actionLabel="Sign in"
+            secondary={
+              <p className="text-sm text-muted-foreground">
+                Don&apos;t have an account?{" "}
+                <Link
+                  href="/user/register"
+                  className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+                >
+                  Register
+                </Link>
+              </p>
+            }
+          />
+        ) : !reviewer.verified ? (
+          <GateMessage
+            icon={<MailWarning className="w-12 h-12 text-amber-500" />}
+            title="Verify your email first"
+            description="We only publish reviews from verified accounts. Confirm your email address and you can post right away."
+            actionHref="/user/verify"
+            actionLabel="Verify email"
+          />
+        ) : submitted ? (
           <div className="flex flex-col items-center text-center gap-3 py-6">
             <CheckCircle2 className="w-12 h-12 text-[#00C085]" />
             <DialogTitle>Thank you!</DialogTitle>
@@ -167,34 +197,12 @@ export function WriteReviewDialog({
                   </button>
                 </div>
 
-                <Field>
-                  <FieldLabel>Full Name</FieldLabel>
-                  <FieldContent>
-                    <Input
-                      placeholder="Your name"
-                      aria-invalid={!!errors.fullName}
-                      {...register("fullName")}
-                    />
-                  </FieldContent>
-                  {errors.fullName && (
-                    <FieldError>{errors.fullName.message}</FieldError>
-                  )}
-                </Field>
-
-                <Field>
-                  <FieldLabel>Email Address</FieldLabel>
-                  <FieldContent>
-                    <Input
-                      type="email"
-                      placeholder="you@example.com"
-                      aria-invalid={!!errors.email}
-                      {...register("email")}
-                    />
-                  </FieldContent>
-                  {errors.email && (
-                    <FieldError>{errors.email.message}</FieldError>
-                  )}
-                </Field>
+                <p className="text-sm text-muted-foreground">
+                  Posting as{" "}
+                  <span className="font-medium text-foreground">
+                    {reviewer.fullName}
+                  </span>
+                </p>
 
                 <Field>
                   <FieldLabel>
@@ -261,6 +269,37 @@ export function WriteReviewDialog({
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function GateMessage({
+  icon,
+  title,
+  description,
+  actionHref,
+  actionLabel,
+  secondary,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  actionHref: string;
+  actionLabel: string;
+  secondary?: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col items-center text-center gap-3 py-6">
+      {icon}
+      <DialogTitle>{title}</DialogTitle>
+      <DialogDescription>{description}</DialogDescription>
+      <Link
+        href={actionHref}
+        className={cn(buttonVariants({}), "mt-2 w-full sm:w-auto")}
+      >
+        {actionLabel}
+      </Link>
+      {secondary}
+    </div>
   );
 }
 

@@ -18,8 +18,9 @@ import Link from "next/link";
 import logo from "@/assets/logo.svg";
 import Image from "next/image";
 import { useState } from "react";
+import { UserMenu, type SessionUser } from "@/components/user/user-menu";
 
-export function Navbar() {
+export function Navbar({ user }: { user: SessionUser | null }) {
   const [open, setOpen] = useState(false);
 
   const navItems = [
@@ -53,11 +54,15 @@ export function Navbar() {
             ))}
           </nav>
           <div className="flex items-center gap-4">
-            <Link href={"/user/login"}>
-            <button className="bg-[#1D1919] text-white rounded-full px-5 py-2 text-[14px] font-medium hover:bg-[#333] transition-colors cursor-pointer">
-              Login
-            </button>
-            </Link>
+            {user ? (
+              <UserMenu user={user} />
+            ) : (
+              <Link href={"/user/login"}>
+              <button className="bg-[#1D1919] text-white rounded-full px-5 py-2 text-[14px] font-medium hover:bg-[#333] transition-colors cursor-pointer">
+                Login
+              </button>
+              </Link>
+            )}
           </div>
         </div>
 
@@ -90,11 +95,18 @@ export function Navbar() {
                   </Link>
                 ))}
                 <div className="mt-8 flex flex-col gap-4">
-                  <Link href={"/user/login"}>
-                  <button className="bg-[#1D1919] text-white rounded-full px-5 py-2 text-[14px] font-medium hover:bg-[#333] transition-colors cursor-pointer">
-                    Login
-                  </button>
-                  </Link>
+                  {user ? (
+                    <div className="flex items-center gap-3">
+                      <UserMenu user={user} onNavigate={closeSidebar} />
+                      <span className="text-sm font-medium">{user.fullName}</span>
+                    </div>
+                  ) : (
+                    <Link href={"/user/login"} onClick={closeSidebar}>
+                    <button className="bg-[#1D1919] text-white rounded-full px-5 py-2 text-[14px] font-medium hover:bg-[#333] transition-colors cursor-pointer">
+                      Login
+                    </button>
+                    </Link>
+                  )}
                 </div>
               </nav>
             </SheetContent>

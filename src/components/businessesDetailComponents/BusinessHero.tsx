@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { FaFacebookF, FaInstagram, FaTwitter, FaYoutube } from "react-icons/fa";
 import { WriteReviewDialog } from "./WriteReviewDialog";
+import { getCurrentUser } from "@/lib/auth/user-auth";
 
 const platformIconMap = {
   facebook: FaFacebookF,
@@ -38,7 +39,12 @@ const platformColorMap = {
   },
 };
 
-export function BusinessHero({ data }: { data: BusinessCard }) {
+export async function BusinessHero({ data }: { data: BusinessCard }) {
+  const user = await getCurrentUser();
+  const reviewer = user
+    ? { fullName: user.fullName, verified: user.verified }
+    : null;
+
   return (
     <section className="py-10 md:pt-[100px] md:pb-16 bg-[#dceddd] md:bg-white relative overflow-hidden">
       {/* Decorative gradient blur */}
@@ -119,7 +125,11 @@ export function BusinessHero({ data }: { data: BusinessCard }) {
               </div>
             </div>
 
-            <WriteReviewDialog businessId={data.id} businessName={data.name} />
+            <WriteReviewDialog
+              businessId={data.id}
+              businessName={data.name}
+              reviewer={reviewer}
+            />
           </div>
 
           {/* Right: Rating widget */}

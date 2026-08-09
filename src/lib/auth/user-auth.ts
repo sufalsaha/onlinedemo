@@ -31,16 +31,15 @@ export async function getCurrentUser() {
     where: {
       id: sessionUser.userId,
     },
+    // Deliberately excludes password and both OTP fields — this object gets
+    // passed down to components, and live codes must not travel with it.
     select: {
       id: true,
       email: true,
       fullName: true,
+      image: true,
       passwordUpdatedAt: true,
       verified: true,
-      verificationOtp: true,
-      verificationOtpSendAt: true,
-      resetPasswordOtp: true,
-      resetPasswordOtpSendAt: true,
     },
   });
 

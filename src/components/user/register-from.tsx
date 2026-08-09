@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import Link from "next/link";
 import { RotateCw } from "lucide-react";
 
@@ -26,27 +25,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { registerUser } from "@/actions/user-actions";
-
-// import { registerUser } from "@/actions/user-actions";
-
-// Validation Schema
-const registerSchema = z
-  .object({
-    name: z.string().min(2, "Name is required"),
-    email: z.string().email("Invalid email address"),
-    password: z
-      .string()
-      .min(6, "Password must be at least 6 characters"),
-    confirmPassword: z
-      .string()
-      .min(6, "Confirm password is required"),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    path: ["confirmPassword"],
-    message: "Passwords do not match",
-  });
-
-type RegisterFormValues = z.infer<typeof registerSchema>;
+import { registerSchema, type RegisterFormValues } from "@/lib/schemas/auth";
 
 export function RegisterForm() {
   const [error, setError] = useState<string | undefined>();
@@ -58,7 +37,7 @@ export function RegisterForm() {
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      name: "",
+      fullName: "",
       email: "",
       password: "",
       confirmPassword: "",
@@ -67,15 +46,9 @@ export function RegisterForm() {
 
   async function onSubmit(values: RegisterFormValues) {
     setError(undefined);
-    console.log(values);
-    
 
     try {
-      const errorResult = await registerUser({
-        fullName: values.name,
-        email: values.email,
-        password: values.password,
-      });
+      const errorResult = await registerUser(values);
 
       if (errorResult?.error) {
         setError(errorResult.error);
@@ -108,17 +81,17 @@ export function RegisterForm() {
           >
             {/* Name */}
             <Field>
-              <FieldLabel htmlFor="name">Full Name</FieldLabel>
+              <FieldLabel htmlFor="fullName">Full Name</FieldLabel>
               <FieldContent>
                 <Input
-                  id="name"
+                  id="fullName"
                   placeholder="John Doe"
-                  aria-invalid={!!errors.name}
-                  {...register("name")}
+                  aria-invalid={!!errors.fullName}
+                  {...register("fullName")}
                 />
               </FieldContent>
-              {errors.name && (
-                <FieldError>{errors.name.message}</FieldError>
+              {errors.fullName && (
+                <FieldError>{errors.fullName.message}</FieldError>
               )}
             </Field>
 

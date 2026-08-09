@@ -24,6 +24,12 @@ model User {
   fullName               String
   password               String
 
+  // Profile — all optional, filled in from /user/profile
+  image                  String?
+  phone                  String?
+  jobTitle               String?
+  bio                    String?
+
   verified               Boolean   @default(false)
 
   verificationOtp        String?

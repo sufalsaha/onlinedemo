@@ -2,7 +2,6 @@
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
-import * as z from "zod"
 import Link from "next/link"
 import { useState } from "react"
 import { RotateCw } from "lucide-react"
@@ -17,16 +16,15 @@ import {
 } from "@/components/ui/field"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-
-// Validation Schema
-const forgotPasswordSchema = z.object({
-  email: z.string().email({ message: "Invalid email address" }),
-})
-
-type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
+import { sendPasswordResetOtp } from "@/actions/user-actions"
+import {
+  forgotPasswordSchema,
+  type ForgotPasswordFormValues,
+} from "@/lib/schemas/auth"
 
 export function ForgotPasswordForm() {
   const [submittedEmail, setSubmittedEmail] = useState<string | null>(null)
+  const [error, setError] = useState<string | undefined>()
 
   const {
     register,
@@ -37,8 +35,21 @@ export function ForgotPasswordForm() {
     defaultValues: { email: "" },
   })
 
-  function onSubmit(values: ForgotPasswordFormValues) {
-    setSubmittedEmail(values.email)
+  async function onSubmit(values: ForgotPasswordFormValues) {
+    setError(undefined)
+
+    try {
+      const result = await sendPasswordResetOtp(values)
+      if (result?.error) {
+        setError(result.error)
+        return
+      }
+      setSubmittedEmail(values.email)
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Something went wrong. Please try again."
+      )
+    }
   }
 
   return (
@@ -49,7 +60,7 @@ export function ForgotPasswordForm() {
             Forgot Password
           </CardTitle>
           <CardDescription className="text-center">
-            Enter your email and we&apos;ll send you a link to reset your password
+            Enter your email and we&apos;ll send you a code to reset your password
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -57,13 +68,13 @@ export function ForgotPasswordForm() {
             <div className="space-y-4">
               <p className="text-sm text-center text-muted-foreground">
                 If an account exists for <span className="font-medium">{submittedEmail}</span>,
-                we&apos;ve sent a reset link. Check your inbox.
+                we&apos;ve sent a reset code. Check your inbox.
               </p>
               <Link
-                href={`/user/verify?email=${encodeURIComponent(submittedEmail)}`}
+                href={`/user/reset-password?email=${encodeURIComponent(submittedEmail)}`}
                 className={cn(buttonVariants({}), "w-full")}
               >
-                Enter verification code
+                Enter reset code
               </Link>
             </div>
           ) : (
@@ -84,6 +95,13 @@ export function ForgotPasswordForm() {
                 {errors.email && <FieldError>{errors.email.message}</FieldError>}
               </Field>
 
+              {/* Server Error Message */}
+              {error && (
+                <div className="text-sm font-medium p-3 bg-destructive/10 text-destructive rounded-md">
+                  {error}
+                </div>
+              )}
+
               {/* Submit Button */}
               <Button type="submit" className="w-full mt-2" disabled={isSubmitting}>
                 {isSubmitting ? (
@@ -92,7 +110,7 @@ export function ForgotPasswordForm() {
                     Sending...
                   </>
                 ) : (
-                  "Send Reset Link"
+                  "Send Reset Code"
                 )}
               </Button>
             </form>

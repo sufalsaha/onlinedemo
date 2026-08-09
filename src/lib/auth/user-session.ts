@@ -73,6 +73,18 @@ export class UserSession<T> {
       });
       return payload;
     } catch (error) {
+      // A cookie that won't verify is routine — an expired token, a rotated
+      // AUTH_SECRET, or a tampered value. The caller reads `undefined` as
+      // "no session", which is the correct outcome, so don't log at error
+      // level and trip the dev overlay over it.
+      const code =
+        error instanceof Error && "code" in error ? String(error.code) : "";
+
+      if (code.startsWith("ERR_JW")) {
+        console.warn(`Ignoring invalid ${this.cookieName} session cookie:`, code);
+        return;
+      }
+
       console.error(error);
     }
   }

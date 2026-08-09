@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import Link from "next/link";
 import { RotateCw } from "lucide-react";
 
@@ -23,16 +22,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { login } from "@/actions/admin-actions";
+import { loginUser } from "@/actions/user-actions";
+import { loginSchema, type LoginFormValues } from "@/lib/schemas/auth";
 import { PasswordInput } from "../ui/password-input";
-
-// Validation Schema
-const loginSchema = z.object({
-  email: z.string().email({ message: "Invalid email address" }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
-});
-
-type LoginFormValues = z.infer<typeof loginSchema>;
 
 export function LoginForm() {
   const [error, setError] = useState<string | undefined>();
@@ -47,23 +39,22 @@ export function LoginForm() {
   });
 
   async function onSubmit(values: LoginFormValues) {
-  setError(undefined);
-  
-  try {
-    const errorResult = await login(values.email, values.password);
-    
-   
-    if (errorResult) {
-      setError(errorResult);
+    setError(undefined);
+
+    try {
+      const result = await loginUser(values);
+
+      if (result?.error) {
+        setError(result.error);
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong. Please try again."
+      );
     }
-  } catch (err) {
-    setError(
-      err instanceof Error
-        ? err.message
-        : "Something went wrong. Please try again."
-    );
   }
-}
 
   return (
     <div className="flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-4 ">
@@ -137,7 +128,7 @@ export function LoginForm() {
           </form>
 
           <div className="mt-4 text-center text-sm text-muted-foreground">
-            Don't have an account?{" "}
+            Don&apos;t have an account?{" "}
             <Link href="/user/register" className="text-blue-600 hover:underline dark:text-blue-400 font-medium">
               Register here
             </Link>
