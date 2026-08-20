@@ -4,7 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { FaFacebookF, FaInstagram, FaTwitter, FaYoutube } from "react-icons/fa";
 import { WriteReviewDialog } from "./WriteReviewDialog";
+import { StarRating } from "./StarRating";
 import { getCurrentUser } from "@/lib/auth/user-auth";
+import { getUserReviewForBusiness } from "@/actions/review-action";
 
 const platformIconMap = {
   facebook: FaFacebookF,
@@ -39,10 +41,15 @@ const platformColorMap = {
   },
 };
 
-export async function BusinessHero({ data }: { data: BusinessCard }) {
+export async function BusinessHero({ data }: { data: BusinessCard & { reviews?: Array<{ rating: number }> } }) {
   const user = await getCurrentUser();
   const reviewer = user
-    ? { fullName: user.fullName, verified: user.verified }
+    ? { fullName: user.fullName, verified: user.verified, id: user.id }
+    : null;
+
+  // Fetch user's existing review for this business (if any)
+  const existingReview = user
+    ? await getUserReviewForBusiness(user.id, data.id)
     : null;
 
   return (
@@ -129,6 +136,7 @@ export async function BusinessHero({ data }: { data: BusinessCard }) {
               businessId={data.id}
               businessName={data.name}
               reviewer={reviewer}
+              existingReview={existingReview}
             />
           </div>
 
@@ -150,13 +158,7 @@ export async function BusinessHero({ data }: { data: BusinessCard }) {
                 </div>
 
                 <div className="flex-1 flex flex-col gap-1.5 mt-1">
-                  {[
-                    { label: "5-star", pct: 0 },
-                    { label: "4-star", pct: 0 },
-                    { label: "3-star", pct: 0 },
-                    { label: "2-star", pct: 0 },
-                    { label: "1-star", pct: 0 },
-                  ].map((bar) => (
+                  {calculateRatingDistribution(data.reviews || []).map((bar) => (
                     <div key={bar.label} className="flex items-center gap-2">
                       <span className="text-[11px] text-[#626161] w-9 shrink-0">
                         {bar.label}
@@ -196,67 +198,42 @@ export async function BusinessHero({ data }: { data: BusinessCard }) {
   );
 }
 
-export function StarRating({
-  rating,
-  size = "sm",
-}: {
-  rating: number;
-  size?: "sm" | "md";
-}) {
-  const boxSize = size === "sm" ? "w-[18px] h-[18px]" : "w-[22px] h-[22px]";
-  const starSize = size === "sm" ? 16 : 18;
+// ─── Helper Functions ────────────────────────────────────────────────────────────
 
-  return (
-    <div className={`flex ${size === "sm" ? "gap-0.5" : "gap-1"}`}>
-      {[1, 2, 3, 4, 5].map((star) => {
-        const filled = star <= Math.floor(rating);
-        const halfFilled = !filled && star - 0.5 <= rating;
+/**
+ * Calculate the distribution of star ratings from reviews.
+ * Returns an array of percentages for 5-star through 1-star.
+ */
+function calculateRatingDistribution(
+  reviews: Array<{ rating: number }>
+): Array<{ label: string; pct: number }> {
+  if (reviews.length === 0) {
+    return [
+      { label: "5-star", pct: 0 },
+      { label: "4-star", pct: 0 },
+      { label: "3-star", pct: 0 },
+      { label: "2-star", pct: 0 },
+      { label: "1-star", pct: 0 },
+    ];
+  }
 
-        // হাফ-স্টারের জন্য ইউনিক আইডি গ্রাডিয়েন্ট
-        const bgGradientId = `bg-half-${star}-${size}`;
-        const starGradientId = `star-half-${star}-${size}`;
+  // Count reviews per star rating
+  const counts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+  for (const review of reviews) {
+    const star = Math.round(review.rating);
+    if (star >= 1 && star <= 5) {
+      counts[star as keyof typeof counts]++;
+    }
+  }
 
-        return (
-          <div
-            key={star}
-            className={`${boxSize} rounded-[2.5px] flex items-center justify-center relative overflow-hidden`}
-            style={{
-              background: filled
-                ? "#45C646"
-                : halfFilled
-                  ? `linear-gradient(90deg, #45C646 50%, #ddd 50%)`
-                  : "#ddd",
-            }}
-          >
-            <svg
-              width={starSize}
-              height={starSize}
-              viewBox="0 0 11 11"
-              fill="none"
-            >
-              <defs>
-                {/* হাফ-স্টারের ভেতরের আইকনের জন্য গ্রাডিয়েন্ট */}
-                <linearGradient id={starGradientId}>
-                  <stop offset="50%" stopColor="#FEFEFE" />
-                  <stop offset="50%" stopColor="#bbb" />
-                </linearGradient>
-              </defs>
-              <path
-                d="M5.5 1l1.2 2.6 2.8.4-2 2 .5 2.8L5.5 7.4l-2.5 1.4.5-2.8-2-2 2.8-.4z"
-                fill={
-                  filled
-                    ? "#FEFEFE"
-                    : halfFilled
-                      ? `url(#${starGradientId})`
-                      : "#bbb"
-                }
-              />
-            </svg>
-          </div>
-        );
-      })}
-    </div>
-  );
+  // Calculate percentages
+  return [
+    { label: "5-star", pct: (counts[5] / reviews.length) * 100 },
+    { label: "4-star", pct: (counts[4] / reviews.length) * 100 },
+    { label: "3-star", pct: (counts[3] / reviews.length) * 100 },
+    { label: "2-star", pct: (counts[2] / reviews.length) * 100 },
+    { label: "1-star", pct: (counts[1] / reviews.length) * 100 },
+  ];
 }
 
 // ─── Shared Components ────────────────────────────────────────────────────────

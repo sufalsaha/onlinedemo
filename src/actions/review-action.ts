@@ -18,6 +18,48 @@ type ActionResult<T> =
   | { error: string; data?: never }
   | { error?: never; data: T };
 
+// ============================================================================
+// REVIEW RESTRICTION HELPERS
+// ============================================================================
+
+/**
+ * Check if a user has already reviewed a specific business.
+ * Ignores deleted reviews.
+ * @returns true if user has already reviewed this business
+ */
+export async function hasUserReviewedBusiness(
+  userId: string,
+  businessId: string
+): Promise<boolean> {
+  const review = await prisma.review.findFirst({
+    where: {
+      userId,
+      businessId,
+      deleted: false,
+    },
+    select: { id: true },
+  });
+  return !!review;
+}
+
+/**
+ * Get a user's review for a specific business (if exists).
+ * @returns Full review object or null
+ */
+export async function getUserReviewForBusiness(
+  userId: string,
+  businessId: string
+) {
+  return await prisma.review.findFirst({
+    where: {
+      userId,
+      businessId,
+      deleted: false,
+    },
+  });
+}
+
+// ============================================================================
 // READ (admin — paginated, searchable, filterable)
 export async function getReviews(opts?: {
   page?: number;
@@ -279,6 +321,12 @@ export async function createPublicReview(
     return { error: "Business not found" };
   }
 
+  // Check if user already reviewed this business
+  const hasReviewed = await hasUserReviewedBusiness(user.id, parsed.data.businessId);
+  if (hasReviewed) {
+    return { error: "You have already submitted a review for this business." };
+  }
+
   try {
     const hdrs = await headers();
     const ipAddress =
@@ -291,6 +339,7 @@ export async function createPublicReview(
       data: {
         businessId: parsed.data.businessId,
         rating: parsed.data.rating,
+        userId: user.id, // Link review to user account
         // Identity comes from the session, never from the payload.
         reviewerName: user.fullName,
         email: user.email,

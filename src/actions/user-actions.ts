@@ -331,15 +331,6 @@ export async function resetPassword(
 
 // ─── Profile ──────────────────────────────────────────────────────────────────
 
-/**
- * Cloudinary's `url` field is http://. next.config.ts only whitelists https for
- * remote images, and an http asset is blocked as mixed content on an https
- * deploy, so normalise before storing.
- */
-function toHttps(url: string) {
-  return url.replace(/^http:\/\//i, "https://");
-}
-
 export async function updateProfile(
   values: ProfileFormValues,
 ): Promise<ActionError & { success?: string; emailChanged?: boolean }> {
@@ -448,7 +439,7 @@ export async function updateProfilePicture(
       return { error: EN.uploadFailed };
     }
 
-    const image = toHttps(uploaded.uploadResult);
+    const image = uploaded.uploadResult;
 
     const previous = await prisma.user.findUnique({
       where: { id: sessionUser.id },

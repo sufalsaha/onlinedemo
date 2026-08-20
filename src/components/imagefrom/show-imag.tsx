@@ -49,12 +49,14 @@ export default function ShowImage({
           return (
             <div
               key={i}
-              className="relative group "
+              className="relative group aspect-square overflow-hidden rounded-md border"
               onClick={() => {
                 selectimg(e);
               }}
             >
-              <Image src={e} alt="" width={400} height={100} />
+              {/* fill, not fixed width/height — the tile is a square grid cell,
+                  so a hardcoded 400x100 stretched every thumbnail 4:1. */}
+              <Image src={e} alt="" fill sizes="120px" className="object-cover" />
 
               <div
                 className={clsx(

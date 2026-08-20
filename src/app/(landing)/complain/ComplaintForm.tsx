@@ -5,6 +5,8 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { RotateCw, Upload } from "lucide-react";
+import { createComplaint } from "@/actions/complaint-action";
+import { uploadFile } from "@/actions/image-action";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,7 +47,10 @@ const complaintFormSchema = z.object({
   pageName: z.string().min(1, "Please select a page"),
   date: z.string().min(1, "Date is required"),
   message: z.string().min(1, "Message is required"),
-  screenshot: z.any().optional(),
+  screenshot: z.any().optional()
+    .refine((file) => !file || file instanceof File, "Invalid file")
+    .refine((file) => !file || file.size <= 5 * 1024 * 1024, "File must be under 5MB")
+    .refine((file) => !file || file.type.startsWith('image/'), "Must be an image"),
 });
 
 type ComplaintFormValues = z.infer<typeof complaintFormSchema>;
@@ -66,6 +71,7 @@ export function ComplaintForm({ businesses, onSuccess }: ComplaintFormProps) {
   const [error, setError] = useState<string | undefined>();
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const [successAlertOpen, setSuccessAlertOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -89,17 +95,56 @@ export function ComplaintForm({ businesses, onSuccess }: ComplaintFormProps) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Validate file size (max 5MB)
+      const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+      if (file.size > MAX_FILE_SIZE) {
+        setError("Screenshot file must be less than 5MB");
+        return;
+      }
+
+      // Validate file type
+      const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+      if (!ACCEPTED_TYPES.includes(file.type)) {
+        setError("Only JPEG, PNG, WebP, and GIF images are allowed");
+        return;
+      }
+
       setSelectedFileName(file.name);
       setValue("screenshot", file);
+      setError(undefined); // Clear any previous errors
     }
   };
 
   async function onSubmit(values: ComplaintFormValues) {
     setError(undefined);
+    setSubmitting(true);
 
     try {
-      console.log("Submitted Data:", values);
-      // TODO: Call your Server Action here (e.g., createComplaint(values))
+      // Upload screenshot if provided
+      let screenshotUrl = "";
+      const screenshotFile = values.screenshot;
+      if (screenshotFile && screenshotFile instanceof File) {
+        const formData = new FormData();
+        formData.append("file", screenshotFile);
+
+        const uploadResult = await uploadFile(formData);
+        if (uploadResult?.uploadResult) {
+          screenshotUrl = uploadResult.uploadResult;
+        } else {
+          setError("Failed to upload screenshot. Please try again.");
+          return;
+        }
+      }
+
+      const result = await createComplaint({
+        ...values,
+        screenshot: screenshotUrl,
+      });
+
+      if ("error" in result) {
+        setError(result.error);
+        return;
+      }
 
       reset();
       setSelectedFileName(null);
@@ -114,6 +159,8 @@ export function ComplaintForm({ businesses, onSuccess }: ComplaintFormProps) {
           ? err.message
           : "Something went wrong. Please try again.",
       );
+    } finally {
+      setSubmitting(false);
     }
   }
 

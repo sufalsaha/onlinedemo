@@ -31,13 +31,22 @@ interface WriteReviewDialogProps {
   businessId: string;
   businessName: string;
   /** null when signed out. Reviews are attributed from the session, not this prop. */
-  reviewer: { fullName: string; verified: boolean } | null;
+  reviewer: { fullName: string; verified: boolean; id: string } | null;
+  /** User's existing review for this business, if any */
+  existingReview?: {
+    id: string;
+    rating: number;
+    title?: string | null;
+    message: string;
+    status: "pending" | "approved" | "rejected";
+  } | null;
 }
 
 export function WriteReviewDialog({
   businessId,
   businessName,
   reviewer,
+  existingReview,
 }: WriteReviewDialogProps) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
@@ -123,6 +132,20 @@ export function WriteReviewDialog({
             description="We only publish reviews from verified accounts. Confirm your email address and you can post right away."
             actionHref="/user/verify"
             actionLabel="Verify email"
+          />
+        ) : existingReview ? (
+          <GateMessage
+            icon={<CheckCircle2 className="w-12 h-12 text-blue-500" />}
+            title="You've already reviewed this business"
+            description={
+              existingReview.status === "pending"
+                ? "Your review is awaiting approval. You'll be notified once it's published."
+                : existingReview.status === "approved"
+                ? "You have already submitted a review for this business."
+                : "Your review was not approved. If you have questions, please contact support."
+            }
+            actionLabel="Close"
+            onClick={() => handleOpenChange(false)}
           />
         ) : submitted ? (
           <div className="flex flex-col items-center text-center gap-3 py-6">
@@ -279,25 +302,37 @@ function GateMessage({
   actionHref,
   actionLabel,
   secondary,
+  onClick,
 }: {
   icon: React.ReactNode;
   title: string;
   description: string;
-  actionHref: string;
+  actionHref?: string;
   actionLabel: string;
   secondary?: React.ReactNode;
+  onClick?: () => void;
 }) {
   return (
     <div className="flex flex-col items-center text-center gap-3 py-6">
       {icon}
       <DialogTitle>{title}</DialogTitle>
       <DialogDescription>{description}</DialogDescription>
-      <Link
-        href={actionHref}
-        className={cn(buttonVariants({}), "mt-2 w-full sm:w-auto")}
-      >
-        {actionLabel}
-      </Link>
+      {actionHref ? (
+        <Link
+          href={actionHref}
+          className={cn(buttonVariants({}), "mt-2 w-full sm:w-auto")}
+        >
+          {actionLabel}
+        </Link>
+      ) : (
+        <Button
+          type="button"
+          onClick={onClick}
+          className="mt-2 w-full sm:w-auto"
+        >
+          {actionLabel}
+        </Button>
+      )}
       {secondary}
     </div>
   );

@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import { ChevronRight, UserRound } from "lucide-react";
-import { StarRating } from "./BusinessHero";
+import { StarRating } from "./StarRating";
 import { BusinessCard, ProudReview } from "@/lib/data";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 

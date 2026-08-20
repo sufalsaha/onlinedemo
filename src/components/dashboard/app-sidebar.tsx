@@ -2,7 +2,7 @@
 
 
 // components/app-sidebar.tsx
-import {  LayoutDashboard, Settings, Users, PieChart, FileText } from "lucide-react";
+import {  LayoutDashboard, Settings, Users, PieChart, FileText, AlertCircle } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -20,6 +20,7 @@ const items = [
   { title: "Category", url: "/dashboard/category", icon: LayoutDashboard },
   { title: "Businesses", url: "/dashboard/business ", icon: PieChart },
   { title: "review", url: "/dashboard/review", icon: Users },
+  { title: "Complaints", url: "/dashboard/complaint", icon: AlertCircle },
   { title: "Blog", url: "/dashboard/blog", icon: FileText },
   { title: "Settings", url: "#", icon: Settings },
 ];

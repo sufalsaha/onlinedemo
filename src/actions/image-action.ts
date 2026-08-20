@@ -39,8 +39,11 @@ export async function uploadFile(data: FormData) {
 
   const uploadResult: string | undefined = await new Promise((resolve) => {
     cloudinary.v2.uploader
+      // secure_url, not url — `url` is http://, and next.config.ts only
+      // whitelists https for remote images, so an http asset is rejected by
+      // next/image and blocked as mixed content on an https deploy.
       .upload_stream((error, uploadResult) => {
-        return resolve(uploadResult?.url);
+        return resolve(uploadResult?.secure_url);
       })
       .end(buffer);
   });

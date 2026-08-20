@@ -40,6 +40,8 @@ model User {
 
   passwordUpdatedAt      DateTime  @default(now())
 
+  complaints             Complaint[]
+
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
 }
@@ -82,6 +84,7 @@ model Business {
   productTag  String[]
   platforms   Platform[]
   reviews     Review[]
+  complaints  Complaint[]
 
   categoryId  String   @db.ObjectId
   category    Category @relation(fields: [categoryId], references: [id])
@@ -138,6 +141,7 @@ model Review {
   reviewerName   String
   authorLocation String? // only set for admin-entered reviews
   email          String
+  userId         String?  @db.ObjectId // Optional for admin reviews, links user accounts
   title          String?
   rating         Float
   image          String?
@@ -154,9 +158,54 @@ model Review {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+  // Note: Unique constraint on [userId, businessId] is enforced at application level
+  // due to existing legacy reviews with userId: null. Database constraint can be added
+  // after data cleanup.
   @@index([businessId, status, deleted])
   @@index([createdAt])
+  @@index([userId]) // For looking up user's reviews
   @@map("reviews")
+}
+
+enum ComplaintStatus {
+  pending
+  in_progress
+  resolved
+  rejected
+}
+
+enum ComplaintPriority {
+  low
+  medium
+  high
+  urgent
+}
+
+model Complaint {
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String?   @db.ObjectId // Optional: null if submitted by guest
+  user       User?     @relation(fields: [userId], references: [id])
+  fullName   String
+  email      String?
+  mobile     String
+  subject    String
+  message    String
+  screenshot String?
+  status     ComplaintStatus @default(pending)
+  priority   ComplaintPriority @default(medium)
+
+  // For business-related complaints
+  businessId String?   @db.ObjectId
+  business   Business? @relation(fields: [businessId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([priority])
+  @@index([userId])
+  @@index([businessId])
+  @@map("complaints")
 }
 
 enum BlogStatus {

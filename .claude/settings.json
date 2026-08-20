@@ -1,7 +1,6 @@
 {
   "env": {
-    "ANTHROPIC_BASE_URL": "https://agentrouter.org",
-    "ANTHROPIC_AUTH_TOKEN": "sk-C3YWdkK9JLjUPvdWyZLkaLHv6gepQovnz87xtLSzuXejiRMw",
-    "ANTHROPIC_MODEL": "claude-opus-5"
+    "ANTHROPIC_BASE_URL": "https://api.z.ai/api/anthropic",
+    "ANTHROPIC_AUTH_TOKEN": "460116c00e304617bbe9c7589eda75be.gjzvUb4J04UrkoED"
   }
 }

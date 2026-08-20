@@ -5,12 +5,8 @@ import { ComplainSection } from "@/components/ComplainSection";
 import { VerifySection } from "@/components/VerifySection";
 import { prisma } from "@/lib/prisma";
 import {  Data } from "@/lib/data";
-
-
-
 export const dynamic = "force-dynamic";
 
-// import { register } from "@/actions/user-actions";
 
 
 
